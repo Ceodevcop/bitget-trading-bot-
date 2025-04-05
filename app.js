@@ -1,10 +1,8 @@
-document.addEventListener('DOMContentLoaded', () => {
-    // Initialize Bitget API
-    const bitget = new BitgetAPI(
-        'YOUR_API_KEY', 
-        'YOUR_API_SECRET',
-        'YOUR_PASSPHRASE'
-    );
+const bitget = new BitgetAPI(
+    'bg_ffcbb26a743c6f3617a03e4edb87aa3f', 
+    'e397e3420dbb6a1b48dfef734e6ef8d6aaf29ee44a044d51dd1742a8143c0693',
+    '02703242'
+);
 
     // DOM Elements
     const startBtn = document.getElementById('start-bot');
