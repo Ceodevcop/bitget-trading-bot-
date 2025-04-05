@@ -1,29 +1,26 @@
-const bitget = new BitgetAPI(
-    'bg_ffcbb26a743c6f3617a03e4edb87aa3f', 
-    'e397e3420dbb6a1b48dfef734e6ef8d6aaf29ee44a044d51dd1742a8143c0693',
-    '02703242'
-);
-
+document.addEventListener('DOMContentLoaded', function() {
     // DOM Elements
-    const startBtn = document.getElementById('start-bot');
-    const stopBtn = document.getElementById('stop-bot');
-    const statusText = document.getElementById('status-text');
+    const startBtn = document.getElementById('start-btn');
+    const stopBtn = document.getElementById('stop-btn');
+    const statusEl = document.getElementById('status');
+    const currentPriceEl = document.getElementById('current-price');
     const tradeLog = document.querySelector('#trade-log tbody');
     
     // Trading variables
+    let bitgetApi;
     let botInterval;
     let currentPrice = 0;
     let gridLevels = [];
     let activeTrades = [];
-
+    
     // Initialize grid visualization
     function initGridVisualization() {
+        const gridLines = document.getElementById('grid-lines');
+        gridLines.innerHTML = '';
+        
         const upperPrice = parseFloat(document.getElementById('upper-price').value);
         const lowerPrice = parseFloat(document.getElementById('lower-price').value);
         const gridCount = parseInt(document.getElementById('grid-levels').value);
-        
-        const gridContainer = document.getElementById('grid-lines');
-        gridContainer.innerHTML = '';
         
         const priceRange = upperPrice - lowerPrice;
         const step = priceRange / gridCount;
@@ -34,10 +31,10 @@ const bitget = new BitgetAPI(
             levelElement.className = 'grid-line';
             levelElement.style.bottom = `${(i/gridCount)*100}%`;
             levelElement.innerHTML = `<span>$${levelPrice.toFixed(2)}</span>`;
-            gridContainer.appendChild(levelElement);
+            gridLines.appendChild(levelElement);
         }
     }
-
+    
     // Calculate grid levels
     function calculateGridLevels() {
         const upperPrice = parseFloat(document.getElementById('upper-price').value);
@@ -58,78 +55,32 @@ const bitget = new BitgetAPI(
             });
         }
     }
-
-    // Start trading bot
-    startBtn.addEventListener('click', async () => {
-        const pair = document.getElementById('trading-pair').value;
+    
+    // Update price chart
+    function updatePriceChart(price) {
+        const chart = document.getElementById('price-chart');
+        const chartHeight = chart.offsetHeight;
         
-        calculateGridLevels();
-        initGridVisualization();
+        // Calculate position (inverted because chart bottom is 0)
+        const upper = parseFloat(document.getElementById('upper-price').value);
+        const lower = parseFloat(document.getElementById('lower-price').value);
+        const priceRange = upper - lower;
+        const position = ((price - lower) / priceRange) * 100;
         
-        statusText.textContent = 'Running';
-        statusText.style.color = '#2ecc71';
-        startBtn.disabled = true;
-        stopBtn.disabled = false;
+        const point = document.createElement('div');
+        point.className = 'price-point';
+        point.style.left = `${(Date.now() % 100)}%`;
+        point.style.bottom = `${position}%`;
         
-        // Start price polling
-        botInterval = setInterval(async () => {
-            try {
-                currentPrice = await bitget.getCurrentPrice(pair);
-                checkGridLevels(pair);
-                updatePriceChart(currentPrice);
-            } catch (error) {
-                console.error('Error:', error);
-            }
-        }, 5000); // Check every 5 seconds
-    });
-
-    // Stop trading bot
-    stopBtn.addEventListener('click', () => {
-        clearInterval(botInterval);
-        statusText.textContent = 'Stopped';
-        statusText.style.color = '#e74c3c';
-        startBtn.disabled = false;
-        stopBtn.disabled = true;
-    });
-
-    // Check grid levels for trading opportunities
-    async function checkGridLevels(pair) {
-        for (const level of gridLevels) {
-            // Check if price is within 0.5% of the grid level
-            if (Math.abs(currentPrice - level.price) < (level.price * 0.005)) {
-                const existingTrade = activeTrades.find(t => t.levelPrice === level.price);
-                
-                if (!existingTrade) {
-                    try {
-                        const side = level.buy ? 'buy' : 'sell';
-                        const order = await bitget.placeOrder(
-                            pair,
-                            side,
-                            level.price,
-                            level.quantity
-                        );
-                        
-                        // Record the trade
-                        const trade = {
-                            id: order.orderId,
-                            timestamp: new Date(),
-                            type: side.toUpperCase(),
-                            price: level.price,
-                            quantity: level.quantity,
-                            levelPrice: level.price
-                        };
-                        
-                        activeTrades.push(trade);
-                        addTradeToLog(trade);
-                        
-                    } catch (error) {
-                        console.error('Trade failed:', error);
-                    }
-                }
-            }
+        chart.appendChild(point);
+        
+        // Keep only the last 100 points
+        const points = chart.querySelectorAll('.price-point');
+        if (points.length > 100) {
+            points[0].remove();
         }
     }
-
+    
     // Add trade to history log
     function addTradeToLog(trade) {
         const row = document.createElement('tr');
@@ -148,30 +99,93 @@ const bitget = new BitgetAPI(
         row.innerHTML = `
             <td>${trade.timestamp.toLocaleTimeString()}</td>
             <td class="${trade.type.toLowerCase()}">${trade.type}</td>
-            <td>${trade.price.toFixed(4)}</td>
+            <td>${trade.price.toFixed(2)}</td>
             <td>${trade.quantity.toFixed(4)}</td>
             <td class="${profit >= 0 ? 'profit' : 'loss'}">
-                ${profit !== null ? profit.toFixed(2) : '--'}
+                ${profit !== null ? '$' + profit.toFixed(2) : '--'}
             </td>
         `;
         
         tradeLog.prepend(row);
     }
-
-    // Simple price chart update
-    function updatePriceChart(price) {
-        const chart = document.getElementById('price-chart');
-        chart.innerHTML += `<div class="price-point" style="bottom: ${(price / 50000) * 100}%"></div>`;
+    
+    // Start trading bot
+    startBtn.addEventListener('click', async function() {
+        const apiKey = document.getElementById('api-key').value;
+        const apiSecret = document.getElementById('api-secret').value;
+        const passphrase = document.getElementById('api-passphrase').value;
+        const pair = document.getElementById('trading-pair').value;
         
-        // Keep only the last 50 points
-        const points = chart.querySelectorAll('.price-point');
-        if (points.length > 50) {
-            points[0].remove();
-        }
-    }
-
-    // Initialize form inputs
-    document.querySelectorAll('.form-group input').forEach(input => {
+        // Initialize API
+        bitgetApi = new BitgetAPI(apiKey, apiSecret, passphrase);
+        
+        // Calculate grid levels
+        calculateGridLevels();
+        initGridVisualization();
+        
+        // Update UI
+        statusEl.textContent = 'Status: Running';
+        startBtn.disabled = true;
+        stopBtn.disabled = false;
+        
+        // Start price polling
+        botInterval = setInterval(async function() {
+            try {
+                currentPrice = await bitgetApi.getCurrentPrice(pair);
+                currentPriceEl.textContent = `Current Price: $${currentPrice.toFixed(2)}`;
+                updatePriceChart(currentPrice);
+                
+                // Check grid levels
+                for (const level of gridLevels) {
+                    // Check if price is within 1% of the grid level
+                    if (Math.abs(currentPrice - level.price) < (level.price * 0.01)) {
+                        const existingTrade = activeTrades.find(t => t.levelPrice === level.price);
+                        
+                        if (!existingTrade) {
+                            try {
+                                const side = level.buy ? 'buy' : 'sell';
+                                const order = await bitgetApi.placeOrder(
+                                    pair,
+                                    side,
+                                    level.price,
+                                    level.quantity
+                                );
+                                
+                                // Record the trade
+                                const trade = {
+                                    id: order.data.orderId,
+                                    timestamp: new Date(),
+                                    type: side.toUpperCase(),
+                                    price: level.price,
+                                    quantity: level.quantity,
+                                    levelPrice: level.price
+                                };
+                                
+                                activeTrades.push(trade);
+                                addTradeToLog(trade);
+                                
+                            } catch (error) {
+                                console.error('Trade failed:', error);
+                            }
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Error in bot loop:', error);
+            }
+        }, 3000); // Check every 3 seconds
+    });
+    
+    // Stop trading bot
+    stopBtn.addEventListener('click', function() {
+        clearInterval(botInterval);
+        statusEl.textContent = 'Status: Stopped';
+        startBtn.disabled = false;
+        stopBtn.disabled = true;
+    });
+    
+    // Initialize grid visualization when inputs change
+    document.querySelectorAll('#upper-price, #lower-price, #grid-levels').forEach(input => {
         input.addEventListener('change', initGridVisualization);
     });
 });
