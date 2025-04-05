@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>D90 Bitget Grid Bot</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="dashboard">
+        <h1>⚡ D90 Bitget Grid Bot</h1>
+        
+        <div class="control-panel">
+            <div class="config-section">
+                <h2>🔧 Configuration</h2>
+                <div class="form-group">
+                    <label>Pair:</label>
+                    <select id="trading-pair">
+                        <option value="BTCUSDT">BTC/USDT</option>
+                        <option value="ETHUSDT">ETH/USDT</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Upper Price ($):</label>
+                    <input type="number" id="upper-price" step="0.0001" value="50000">
+                </div>
+                <div class="form-group">
+                    <label>Lower Price ($):</label>
+                    <input type="number" id="lower-price" step="0.0001" value="40000">
+                </div>
+                <div class="form-group">
+                    <label>Grid Levels:</label>
+                    <input type="number" id="grid-levels" value="10" min="3" max="50">
+                </div>
+                <div class="form-group">
+                    <label>Investment ($):</label>
+                    <input type="number" id="investment" value="1000" min="10">
+                </div>
+            </div>
+
+            <div class="action-section">
+                <button id="start-bot" class="btn start">▶ Start Bot</button>
+                <button id="stop-bot" class="btn stop" disabled>⏹ Stop Bot</button>
+                <div class="bot-status">Status: <span id="status-text">Idle</span></div>
+            </div>
+        </div>
+
+        <div class="trading-view">
+            <h2>📊 Trading View</h2>
+            <div id="price-chart"></div>
+            <div class="grid-lines" id="grid-lines"></div>
+        </div>
+
+        <div class="trade-history">
+            <h2>📝 Trade History</h2>
+            <table id="trade-log">
+                <thead>
+                    <tr>
+                        <th>Time</th>
+                        <th>Type</th>
+                        <th>Price</th>
+                        <th>Amount</th>
+                        <th>Profit</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script src="bitget-api.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
